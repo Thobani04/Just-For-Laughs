@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>FOR LAUGHS | Comic Feed - Share Each Post</title>
+  <meta name="description" content="For Laughs - A comic-style social feed where users can post, comment with text or voice, reply, and share posts via QR code. Admin controls all deletions.">
+  <meta name="author" content="For Laughs">
+  <meta property="og:title" content="FOR LAUGHS | Comic Feed">
+  <meta property="og:description" content="Share laughs with text, images, videos, and voice comments!">
+  <meta property="og:type" content="website">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- QR Code Library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: repeating-linear-gradient(45deg, #fff1b5 0px, #fff1b5 20px, #ffe59a 20px, #ffe59a 40px);
+      font-family: 'Comic Neue', 'Comic Sans MS', 'Chalkboard SE', 'Luckiest Guy', cursive, sans-serif;
+      padding: 20px 15px;
+    }
+
+    .comic-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: #fffef7;
+      border: 6px solid #000;
+      border-radius: 50px 50px 30px 30px;
+      box-shadow: 15px 15px 0 #ffcf4a;
+      overflow: hidden;
+    }
+
+    .comic-header {
+      background: #ffde59;
+      padding: 15px 20px;
+      border-bottom: 5px dashed #000;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .title-bam {
+      font-size: 2rem;
+      font-weight: 900;
+      text-shadow: 4px 4px 0 #ff8c00;
+      background: #000;
+      display: inline-block;
+      color: #ffde59;
+      padding: 0 15px;
+      border-radius: 60px;
+    }
+    .sub {
+      font-size: 0.8rem;
+      background: white;
+      border: 2px solid black;
+      padding: 4px 12px;
+      border-radius: 30px;
+    }
+
+    /* POST CARDS */
+    .posts-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      padding: 20px;
+    }
+    .post-card {
+      background: #fff9e8;
+      border: 5px solid black;
+      border-radius: 50px;
+      overflow: hidden;
+      box-shadow: 12px 12px 0 #ccaa55;
+      transition: 0.2s;
+    }
+    .post-card:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 16px 16px 0 #ccaa55;
+    }
+    .post-header {
+      background: #ffcc66;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      border-bottom: 3px solid black;
+    }
+    .post-date {
+      font-size: 0.7rem;
+      background: black;
+      color: #ffcc66;
+      padding: 4px 12px;
+      border-radius: 30px;
+    }
+    .admin-delete-post {
+      background: #ff5555;
+      border: none;
+      border-radius: 40px;
+      padding: 5px 15px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: monospace;
+      transition: 0.1s;
+    }
+    .admin-delete-post:hover {
+      background: #ff0000;
+      color: white;
+    }
+    .post-media {
+      padding: 20px;
+      text-align: center;
+      background: #fff3cf;
+    }
+    .post-media img, .post-media video {
+      max-width: 100%;
+      max-height: 400px;
+      border-radius: 40px;
+      border: 4px solid #ffaa33;
+      box-shadow: 6px 6px 0 rgba(0,0,0,0.1);
+    }
+    .post-text-display {
+      font-size: 1.6rem;
+      font-weight: bold;
+      background: #ffe3a3;
+      padding: 25px;
+      border-radius: 40px;
+      text-align: center;
+    }
+    /* Post Actions */
+    .post-actions {
+      background: #ffecb3;
+      padding: 12px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border-top: 2px solid #dbaa44;
+    }
+    .reaction-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .react-btn-sm {
+      background: white;
+      border: 2px solid black;
+      border-radius: 50px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.05s linear;
+    }
+    .react-btn-sm:active { transform: scale(0.95); }
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .comment-toggle-post, .share-post-btn {
+      background: #3c280e;
+      color: #ffdd99;
+      border: none;
+      border-radius: 50px;
+      padding: 6px 18px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.1s;
+    }
+    .share-post-btn {
+      background: #2a6b2a;
+      color: #ccff99;
+    }
+    .share-post-btn:hover { background: #1e4f1e; }
+    .comment-toggle-post:hover { background: #5e3f16; }
+    
+    /* Share Modal */
+    .share-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 20000;
+      justify-content: center;
+      align-items: center;
+    }
+    .share-panel {
+      background: #ffefbf;
+      border: 8px solid black;
+      border-radius: 70px;
+      max-width: 400px;
+      width: 90%;
+      padding: 25px;
+      text-align: center;
+    }
+    .share-panel h3 { margin-bottom: 15px; }
+    .qr-container {
+      display: flex;
+      justify-content: center;
+      margin: 15px 0;
+      background: white;
+      padding: 15px;
+      border-radius: 30px;
+    }
+    .share-link-input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 50px;
+      border: 2px solid black;
+      margin: 10px 0;
+      font-family: monospace;
+    }
+    .copy-link-btn {
+      background: #ff9900;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 40px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .close-share {
+      background: #333;
+      color: white;
+      margin-top: 10px;
+    }
+
+    /* Comments Area */
+    .comments-area {
+      background: #f7e9c3;
+      padding: 15px;
+      display: none;
+      border-top: 2px solid #ccaa55;
+    }
+    .comments-area.open { display: block; }
+    .comment-input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .comment-input-group textarea {
+      flex: 1;
+      padding: 10px;
+      border-radius: 30px;
+      border: 2px solid #b97f2e;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .voice-record-comment {
+      background: #ff884d;
+      border: 2px solid black;
+      border-radius: 50px;
+      width: 48px;
+      height: 48px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      transition: 0.1s;
+    }
+    .voice-record-comment.recording { background: #ff3333; animation: pulse 0.8s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    .submit-comment-post {
+      background: #ff9900;
+      border: none;
+      border-radius: 50px;
+      padding: 8px 20px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    .comments-thread {
+      max-height: 400px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 15px;
+    }
+    .comment-item {
+      background: white;
+      border-radius: 30px;
+      padding: 10px 15px;
+      border: 2px solid black;
+    }
+    .comment-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: #b35f00;
+      margin-bottom: 5px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .reply-button {
+      background: #ffdd99;
+      border: none;
+      border-radius: 30px;
+      padding: 3px 12px;
+      font-size: 0.7rem;
+      margin-top: 6px;
+      cursor: pointer;
+    }
+    .replies-container {
+      margin-left: 25px;
+      margin-top: 10px;
+      padding-left: 12px;
+      border-left: 3px solid #ffaa44;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .reply-input-area {
+      display: none;
+      margin-top: 8px;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .reply-input-area.open { display: flex; }
+    .reply-row {
+      display: flex;
+      gap: 6px;
+    }
+    .reply-row textarea {
+      flex: 1;
+      padding: 6px;
+      border-radius: 30px;
+      border: 1px solid #b97f2e;
+      font-size: 0.8rem;
+      font-family: inherit;
+    }
+    .reply-voice-btn {
+      background: #ff884d;
+      border: 1px solid black;
+      border-radius: 40px;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .submit-reply {
+      background: #ffaa44;
+      border: none;
+      border-radius: 30px;
+      padding: 4px 12px;
+      font-weight: bold;
+      align-self: flex-start;
+      cursor: pointer;
+    }
+    .admin-delete-content {
+      background: #ff6666;
+      border: none;
+      border-radius: 30px;
+      padding: 2px 10px;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+    .voice-audio-comment { max-width: 180px; border-radius: 30px; }
+    
+    /* Admin secret button */
+    .admin-secret {
+      position: fixed;
+      bottom: 15px;
+      right: 15px;
+      background: #2d2b1ecc;
+      color: #ffcf70;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 40px;
+      cursor: pointer;
+      opacity: 0.6;
+      z-index: 999;
+      border: 1px solid #ffc107;
+      backdrop-filter: blur(3px);
+    }
+    .admin-secret:hover { opacity: 1; background: black; }
+    
+    /* Admin Modal */
+    .admin-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+    }
+    .admin-panel {
+      background: #ffefbf;
+      border: 8px solid black;
+      border-radius: 70px;
+      max-width: 500px;
+      width: 90%;
+      padding: 25px;
+      text-align: center;
+    }
+    .admin-panel select, .admin-panel input, .admin-panel textarea {
+      width: 100%;
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 50px;
+      border: 2px solid black;
+      font-family: inherit;
+    }
+    .admin-panel button { background: #ff9900; border: none; padding: 10px 20px; border-radius: 40px; margin: 6px; cursor: pointer; font-weight: bold; }
+    .close-admin { background: #333; color: white; }
+    footer { background: black; color: #ffcd7e; text-align: center; padding: 12px; font-size: 0.7rem; }
+    @media (max-width: 600px) {
+      .post-text-display { font-size: 1.2rem; }
+      .title-bam { font-size: 1.4rem; }
+      .action-buttons { width: 100%; justify-content: flex-start; }
+      .voice-record-comment { width: 42px; height: 42px; font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="comic-wrapper">
+  <div class="comic-header">
+    <div><span class="title-bam">💥 FOR LAUGHS 💥</span><div class="sub"><i class="fas fa-share-alt"></i> SHARE EACH POST</div></div>
+    <div><i class="fas fa-comment-dots"></i> Comment & Reply</div>
+  </div>
+  
+  <div class="posts-feed" id="postsFeed">
+    <!-- dynamic posts will appear here -->
+  </div>
+  <footer><i class="fas fa-trash-alt"></i> Admin only: delete any post, comment, or reply | Click share button on any post for QR code + link</footer>
+</div>
+
+<!-- Share Modal (QR + Link) -->
+<div id="shareModal" class="share-modal">
+  <div class="share-panel">
+    <h3><i class="fas fa-share-alt"></i> SHARE THIS POST</h3>
+    <div id="shareQRContainer" class="qr-container"></div>
+    <input type="text" id="shareLinkInput" class="share-link-input" readonly>
+    <button id="copyShareLinkBtn" class="copy-link-btn"><i class="fas fa-copy"></i> COPY LINK</button>
+    <button id="closeShareBtn" class="close-share copy-link-btn">CLOSE</button>
+  </div>
+</div>
+
+<!-- Admin Modal for creating NEW posts -->
+<div id="adminModal" class="admin-modal">
+  <div class="admin-panel">
+    <h2><i class="fas fa-plus-circle"></i> CREATE NEW POST (ADMIN)</h2>
+    <div id="loginView">
+      <input type="password" id="adminPassword" placeholder="Admin code">
+      <button id="loginBtn">UNLOCK</button>
+      <p style="font-size:12px;">🔒 code: 2025</p>
+    </div>
+    <div id="adminUploadView" style="display:none;">
+      <h3>📦 UPLOAD NEW CONTENT</h3>
+      <select id="contentTypeSelect">
+        <option value="text">📝 Text Post</option>
+        <option value="image">🖼️ Image Post</option>
+        <option value="video">🎥 Video Post</option>
+      </select>
+      <div id="adminDynamicInput"></div>
+      <button id="muteToggleBtn" style="background:#ffaa44;">🔊 SOUND: ON</button>
+      <button id="publishNewPostBtn"><i class="fas fa-save"></i> CREATE POST</button>
+      <button id="logoutBtn" class="close-admin">LOGOUT</button>
+    </div>
+    <button id="closeModalBtn" class="close-admin">CLOSE</button>
+  </div>
+</div>
+
+<div class="admin-secret" id="adminSecretBtn"><i class="fas fa-user-secret"></i> ADMIN</div>
+
+<script>
+  // ========== DATA: array of posts ==========
+  let allPosts = [];
+  let nextPostId = 1;
+  let nextCommentId = 1;
+  let isAdminMode = false;
+  let soundEnabled = true;
+  
+  // Share modal state
+  let currentSharePostId = null;
+  
+  function saveAllData() {
+    localStorage.setItem("forLaughs_allPosts", JSON.stringify(allPosts));
+    localStorage.setItem("forLaughs_nextPostId", nextPostId);
+    localStorage.setItem("forLaughs_nextCommentId", nextCommentId);
+    localStorage.setItem("forLaughs_sound", soundEnabled);
+  }
+  
+  function loadSavedData() {
+    const saved = localStorage.getItem("forLaughs_allPosts");
+    if (saved) {
+      try { allPosts = JSON.parse(saved); } catch(e) { allPosts = []; }
+    }
+    if (!allPosts.length) {
+      allPosts.push({
+        id: nextPostId++,
+        type: "text",
+        content: "🤡 Welcome to FOR LAUGHS! Admin can create new posts. Click SHARE on any post to get QR code & link. Everyone can comment & reply! 🎙️ Try voice comments! 🤡",
+        reactions: { like: 0, lol: 0, dead: 0 },
+        comments: [],
+        timestamp: Date.now()
+      });
+    }
+    const savedPostId = localStorage.getItem("forLaughs_nextPostId");
+    if (savedPostId) nextPostId = parseInt(savedPostId);
+    const savedCommentId = localStorage.getItem("forLaughs_nextCommentId");
+    if (savedCommentId) nextCommentId = parseInt(savedCommentId);
+    const savedSound = localStorage.getItem("forLaughs_sound");
+    if (savedSound !== null) soundEnabled = savedSound === "true";
+    renderAllPosts();
+  }
+  
+  function playPopSound() {
+    if (!soundEnabled) return;
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value = 880; gain.gain.value = 0.08;
+      osc.start(); gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
+      osc.stop(audioCtx.currentTime + 0.3);
+      audioCtx.resume();
+    } catch(e) {}
+  }
+  
+  function escapeHtml(str) { return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+  
+  function getPostShareUrl(postId) {
+    return window.location.origin + window.location.pathname + `?post=${postId}`;
+  }
+  
+  function openShareModal(postId) {
+    currentSharePostId = postId;
+    const shareUrl = getPostShareUrl(postId);
+    const container = document.getElementById("shareQRContainer");
+    container.innerHTML = "";
+    new QRCode(container, {
+      text: shareUrl,
+      width: 180,
+      height: 180
+    });
+    document.getElementById("shareLinkInput").value = shareUrl;
+    document.getElementById("shareModal").style.display = "flex";
+  }
+  
+  function renderAllPosts() {
+    const feed = document.getElementById("postsFeed");
+    if (!allPosts.length) { feed.innerHTML = "<div style='padding:40px;text-align:center'>No posts yet. Admin can create!</div>"; return; }
+    feed.innerHTML = allPosts.map(post => renderSinglePost(post)).join('');
+    attachAllPostEvents();
+    // Check URL for shared post highlight
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedPostId = urlParams.get("post");
+    if (sharedPostId) {
+      const targetPost = document.querySelector(`.post-card[data-post-id="${sharedPostId}"]`);
+      if (targetPost) {
+        targetPost.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetPost.style.boxShadow = "0 0 0 4px #ff4400, 12px 12px 0 #ccaa55";
+        setTimeout(() => { targetPost.style.boxShadow = ""; }, 3000);
+      }
+      // Clean URL without reloading
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }
+  
+  function renderSinglePost(post) {
+    const mediaHtml = post.type === "text" ? `<div class="post-text-display">${escapeHtml(post.content)}</div>` :
+                      post.type === "image" ? `<img src="${escapeHtml(post.content)}" onerror="this.src='https://via.placeholder.com/400?text=Image+Error'">` :
+                      `<video controls autoplay muted loop playsinline><source src="${escapeHtml(post.content)}" type="video/mp4"></video>`;
+    const reactions = post.reactions;
+    const adminDeletePostBtn = isAdminMode ? `<button class="admin-delete-post" data-post-id="${post.id}"><i class="fas fa-trash"></i> DELETE POST</button>` : '';
+    return `
+      <div class="post-card" data-post-id="${post.id}">
+        <div class="post-header">
+          <span class="post-date"><i class="far fa-calendar-alt"></i> ${new Date(post.timestamp).toLocaleString()}</span>
+          ${adminDeletePostBtn}
+        </div>
+        <div class="post-media">
+          ${mediaHtml}
+        </div>
+        <div class="post-actions">
+          <div class="reaction-buttons">
+            <button class="react-btn-sm" data-react="like" data-post="${post.id}">❤️ LIKE ${reactions.like>0?`<span class="react-count-badge" style="background:black;color:yellow;padding:0 6px;border-radius:20px;margin-left:4px;">${reactions.like}</span>`:''}</button>
+            <button class="react-btn-sm" data-react="lol" data-post="${post.id}">😂 LOL ${reactions.lol>0?`<span class="react-count-badge" style="background:black;color:yellow;padding:0 6px;border-radius:20px;margin-left:4px;">${reactions.lol}</span>`:''}</button>
+            <button class="react-btn-sm" data-react="dead" data-post="${post.id}">💀 DEAD ${reactions.dead>0?`<span class="react-count-badge" style="background:black;color:yellow;padding:0 6px;border-radius:20px;margin-left:4px;">${reactions.dead}</span>`:''}</button>
+          </div>
+          <div class="action-buttons">
+            <button class="comment-toggle-post" data-post-comment="${post.id}"><i class="fas fa-comment"></i> Comments (${post.comments.length})</button>
+            <button class="share-post-btn" data-share-post="${post.id}"><i class="fas fa-share-alt"></i> Share</button>
+          </div>
+        </div>
+        <div class="comments-area" id="commentsArea-${post.id}">
+          <div class="comment-input-group">
+            <textarea id="commentInput-${post.id}" rows="2" placeholder="Write a comment..."></textarea>
+            <div class="voice-record-comment" data-post-voice="${post.id}"><i class="fas fa-microphone"></i></div>
+          </div>
+          <div id="voicePreview-${post.id}"></div>
+          <button class="submit-comment-post" data-submit-comment="${post.id}"><i class="fas fa-paper-plane"></i> ADD COMMENT</button>
+          <div class="comments-thread" id="commentsThread-${post.id}">
+            ${renderCommentsTree(post.comments, post.id)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  function renderCommentsTree(comments, postId) {
+    if (!comments.length) return `<div style="padding:10px;text-align:center;">💬 No comments yet. Be first!</div>`;
+    return comments.map(comment => renderCommentWithReplies(comment, postId)).join('');
+  }
+  
+  function renderCommentWithReplies(comment, postId) {
+    const contentHtml = comment.type === 'text' ? `<div>${escapeHtml(comment.content)}</div>` : `<audio controls src="${escapeHtml(comment.content)}" class="voice-audio-comment"></audio>`;
+    const adminDeleteBtn = isAdminMode ? `<button class="admin-delete-content" data-del-comment="${comment.id}" data-post-id="${postId}" data-parent-comment="${comment.parentId || ''}">🗑️</button>` : '';
+    const repliesHtml = comment.replies && comment.replies.length ? 
+      `<div class="replies-container">${comment.replies.map(reply => renderCommentWithReplies(reply, postId)).join('')}</div>` : '';
+    return `
+      <div class="comment-item" data-comment-id="${comment.id}">
+        <div class="comment-header">
+          <span><i class="fas fa-user"></i> Viewer • ${new Date(comment.timestamp).toLocaleString()}</span>
+          ${adminDeleteBtn}
+        </div>
+        <div class="comment-content">${contentHtml}</div>
+        <button class="reply-button" data-reply-to="${comment.id}" data-post-id="${postId}"><i class="fas fa-reply"></i> Reply</button>
+        <div class="reply-input-area" id="replyArea-${postId}-${comment.id}">
+          <div class="reply-row">
+            <textarea id="replyText-${postId}-${comment.id}" rows="1" placeholder="Your reply..."></textarea>
+            <div class="reply-voice-btn" data-reply-voice="${postId}|${comment.id}"><i class="fas fa-microphone"></i></div>
+          </div>
+          <div id="replyVoicePreview-${postId}-${comment.id}"></div>
+          <button class="submit-reply" data-submit-reply="${postId}|${comment.id}">Post Reply</button>
+        </div>
+        ${repliesHtml}
+      </div>
+    `;
+  }
+  
+  // Voice recording state
+  let activeVoiceRecorders = {};
+  
+  async function startVoiceRecording(key, elementId, previewId) {
+    if (activeVoiceRecorders[key] && activeVoiceRecorders[key].recording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      let chunks = [];
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        const reader = new FileReader();
+        reader.onloadend = () => { activeVoiceRecorders[key].pendingData = reader.result; };
+        reader.readAsDataURL(blob);
+        const previewDiv = document.getElementById(previewId);
+        if(previewDiv) previewDiv.innerHTML = `<div style="background:#e6d5a8; border-radius:30px; padding:6px; margin-top:5px;"><audio controls src="${url}"></audio><button class="cancel-voice" data-cancel="${key}" style="background:#aa5555; border:none; border-radius:30px; padding:2px 10px; margin-left:8px;">✖</button></div>`;
+        document.querySelector(`.cancel-voice[data-cancel="${key}"]`)?.addEventListener("click", () => { activeVoiceRecorders[key].pendingData = null; if(previewDiv) previewDiv.innerHTML = ""; });
+        stream.getTracks().forEach(t => t.stop());
+        activeVoiceRecorders[key].recording = false;
+        const btn = document.getElementById(elementId);
+        if(btn) btn.classList.remove("recording");
+      };
+      recorder.start();
+      activeVoiceRecorders[key] = { recorder, recording: true, pendingData: null };
+      const btn = document.getElementById(elementId);
+      if(btn) btn.classList.add("recording");
+    } catch(e) { alert("Microphone access needed for voice comments!"); }
+  }
+  
+  function stopVoiceRecording(key) {
+    const rec = activeVoiceRecorders[key];
+    if(rec && rec.recorder && rec.recorder.state !== "inactive") rec.recorder.stop();
+  }
+  
+  function attachAllPostEvents() {
+    // Reactions
+    document.querySelectorAll(".react-btn-sm").forEach(btn => {
+      btn.onclick = () => {
+        const postId = parseInt(btn.getAttribute("data-post"));
+        const reactType = btn.getAttribute("data-react");
+        const post = allPosts.find(p => p.id === postId);
+        if(post) { post.reactions[reactType]++; saveAllData(); renderAllPosts(); playPopSound(); }
+      };
+    });
+    
+    // Toggle comments
+    document.querySelectorAll(".comment-toggle-post").forEach(btn => {
+      btn.onclick = () => {
+        const postId = btn.getAttribute("data-post-comment");
+        const area = document.getElementById(`commentsArea-${postId}`);
+        if(area) area.classList.toggle("open");
+      };
+    });
+    
+    // Share buttons
+    document.querySelectorAll(".share-post-btn").forEach(btn => {
+      btn.onclick = () => {
+        const postId = parseInt(btn.getAttribute("data-share-post"));
+        openShareModal(postId);
+      };
+    });
+    
+    // Submit comment
+    document.querySelectorAll(".submit-comment-post").forEach(btn => {
+      btn.onclick = () => {
+        const postId = parseInt(btn.getAttribute("data-submit-comment"));
+        const post = allPosts.find(p => p.id === postId);
+        if(!post) return;
+        const textarea = document.getElementById(`commentInput-${postId}`);
+        const textVal = textarea.value.trim();
+        const voiceKey = `post_${postId}`;
+        const voiceData = activeVoiceRecorders[voiceKey]?.pendingData;
+        if (voiceData) {
+          post.comments.unshift({ id: nextCommentId++, type: "voice", content: voiceData, timestamp: Date.now(), replies: [], parentId: null });
+          delete activeVoiceRecorders[voiceKey];
+          document.getElementById(`voicePreview-${postId}`).innerHTML = "";
+          textarea.value = "";
+          saveAllData(); renderAllPosts(); playPopSound();
+        } else if (textVal) {
+          post.comments.unshift({ id: nextCommentId++, type: "text", content: textVal, timestamp: Date.now(), replies: [], parentId: null });
+          textarea.value = "";
+          saveAllData(); renderAllPosts(); playPopSound();
+        } else alert("Write something or record voice!");
+      };
+    });
+    
+    // Voice record for main comment
+    document.querySelectorAll(".voice-record-comment").forEach(btn => {
+      const postId = btn.getAttribute("data-post-voice");
+      const key = `post_${postId}`;
+      btn.id = `voiceBtnPost_${postId}`;
+      btn.onclick = () => {
+        if(activeVoiceRecorders[key] && activeVoiceRecorders[key].recording) stopVoiceRecording(key);
+        else startVoiceRecording(key, `voiceBtnPost_${postId}`, `voicePreview-${postId}`);
+      };
+    });
+    
+    // Reply buttons
+    document.querySelectorAll(".reply-button").forEach(btn => {
+      btn.onclick = () => {
+        const replyTo = btn.getAttribute("data-reply-to");
+        const postId = btn.getAttribute("data-post-id");
+        const area = document.getElementById(`replyArea-${postId}-${replyTo}`);
+        if(area) area.classList.toggle("open");
+      };
+    });
+    
+    // Reply voice
+    document.querySelectorAll(".reply-voice-btn").forEach(btn => {
+      const ids = btn.getAttribute("data-reply-voice").split("|");
+      const postId = ids[0], commentId = ids[1];
+      const key = `reply_${postId}_${commentId}`;
+      btn.id = `replyVoice_${postId}_${commentId}`;
+      btn.onclick = () => {
+        if(activeVoiceRecorders[key] && activeVoiceRecorders[key].recording) stopVoiceRecording(key);
+        else startVoiceRecording(key, `replyVoice_${postId}_${commentId}`, `replyVoicePreview-${postId}-${commentId}`);
+      };
+    });
+    
+    // Submit reply
+    document.querySelectorAll(".submit-reply").forEach(btn => {
+      btn.onclick = () => {
+        const ids = btn.getAttribute("data-submit-reply").split("|");
+        const postId = parseInt(ids[0]), parentCommentId = parseInt(ids[1]);
+        const post = allPosts.find(p => p.id === postId);
+        if(!post) return;
+        const textarea = document.getElementById(`replyText-${postId}-${parentCommentId}`);
+        const textVal = textarea.value.trim();
+        const voiceKey = `reply_${postId}_${parentCommentId}`;
+        const voiceData = activeVoiceRecorders[voiceKey]?.pendingData;
+        const findParent = (comments) => {
+          for(let c of comments) {
+            if(c.id === parentCommentId) return c;
+            if(c.replies.length) { const found = findParent(c.replies); if(found) return found; }
+          } return null;
+        };
+        const parentComment = findParent(post.comments);
+        if(parentComment) {
+          if(voiceData) {
+            parentComment.replies.push({ id: nextCommentId++, type: "voice", content: voiceData, timestamp: Date.now(), replies: [], parentId: parentCommentId });
+            delete activeVoiceRecorders[voiceKey];
+            document.getElementById(`replyVoicePreview-${postId}-${parentCommentId}`).innerHTML = "";
+            textarea.value = "";
+            saveAllData(); renderAllPosts(); playPopSound();
+          } else if (textVal) {
+            parentComment.replies.push({ id: nextCommentId++, type: "text", content: textVal, timestamp: Date.now(), replies: [], parentId: parentCommentId });
+            textarea.value = "";
+            saveAllData(); renderAllPosts(); playPopSound();
+          } else alert("Write or record a reply!");
+        }
+      };
+    });
+    
+    // Admin delete: posts, comments
+    if(isAdminMode) {
+      document.querySelectorAll(".admin-delete-post").forEach(btn => {
+        btn.onclick = () => {
+          if(confirm("Delete entire post? This cannot be undone.")) {
+            const postId = parseInt(btn.getAttribute("data-post-id"));
+            allPosts = allPosts.filter(p => p.id !== postId);
+            saveAllData(); renderAllPosts(); playPopSound();
+          }
+        };
+      });
+      document.querySelectorAll(".admin-delete-content").forEach(btn => {
+        btn.onclick = () => {
+          const commentId = parseInt(btn.getAttribute("data-del-comment"));
+          const postId = parseInt(btn.getAttribute("data-post-id"));
+          const post = allPosts.find(p => p.id === postId);
+          if(!post) return;
+          const deleteFromArray = (comments, id) => {
+            for(let i=0; i<comments.length; i++) {
+              if(comments[i].id === id) { comments.splice(i,1); return true; }
+              if(comments[i].replies.length && deleteFromArray(comments[i].replies, id)) return true;
+            } return false;
+          };
+          deleteFromArray(post.comments, commentId);
+          saveAllData(); renderAllPosts(); playPopSound();
+        };
+      });
+    }
+  }
+  
+  // ========== ADMIN MODAL ==========
+  let loggedIn = false;
+  const adminBtn = document.getElementById("adminSecretBtn"), modal = document.getElementById("adminModal");
+  const loginDiv = document.getElementById("loginView"), uploadDiv = document.getElementById("adminUploadView");
+  const loginBtn = document.getElementById("loginBtn"), logoutBtn = document.getElementById("logoutBtn"), closeModal = document.getElementById("closeModalBtn");
+  const createPostBtn = document.getElementById("publishNewPostBtn"), contentType = document.getElementById("contentTypeSelect");
+  const adminDynamic = document.getElementById("adminDynamicInput");
+  const muteToggle = document.getElementById("muteToggleBtn");
+  
+  function updateMuteUI() { if(muteToggle) muteToggle.innerHTML = soundEnabled ? "🔊 SOUND: ON" : "🔇 SOUND: OFF"; }
+  if(muteToggle) muteToggle.onclick = () => { soundEnabled = !soundEnabled; saveAllData(); updateMuteUI(); playPopSound(); };
+  
+  function renderAdminForm() {
+    const type = contentType.value;
+    if(type === "text") adminDynamic.innerHTML = `<textarea id="adminTextPost" rows="3" placeholder="Enter funny text..."></textarea>`;
+    else if(type === "image") adminDynamic.innerHTML = `<input id="adminImageUrl" placeholder="Image URL"><input type="file" id="adminImageFile"><div id="adminImgPrev"></div>`;
+    else adminDynamic.innerHTML = `<input id="adminVideoUrl" placeholder="Video URL"><input type="file" id="adminVideoFile"><div id="adminVidPrev"></div>`;
+    if(type === "image") document.getElementById("adminImageFile")?.addEventListener("change", e=>{ const f=e.target.files[0]; if(f){ const r=new FileReader(); r.onload=ev=>{ document.getElementById("adminImageUrl").value=ev.target.result; document.getElementById("adminImgPrev").innerHTML=`<img src="${ev.target.result}" style="max-width:100px; border-radius:20px;">`; }; r.readAsDataURL(f); } });
+    if(type === "video") document.getElementById("adminVideoFile")?.addEventListener("change", e=>{ const f=e.target.files[0]; if(f){ const url=URL.createObjectURL(f); document.getElementById("adminVideoUrl").value=url; document.getElementById("adminVidPrev").innerHTML=`<video width="120" controls><source src="${url}"></video>`; } });
+  }
+  contentType.addEventListener("change", renderAdminForm);
+  loginBtn.onclick = () => { if(document.getElementById("adminPassword").value === "2025") { loggedIn = true; isAdminMode = true; loginDiv.style.display = "none"; uploadDiv.style.display = "block"; renderAdminForm(); updateMuteUI(); renderAllPosts(); } else alert("Wrong code"); };
+  logoutBtn.onclick = () => { loggedIn = false; isAdminMode = false; loginDiv.style.display = "block"; uploadDiv.style.display = "none"; modal.style.display = "none"; renderAllPosts(); };
+  closeModal.onclick = () => { modal.style.display = "none"; };
+  adminBtn.onclick = () => { modal.style.display = "flex"; };
+  createPostBtn.onclick = () => {
+    const type = contentType.value;
+    let content = "";
+    if(type === "text") { const txt = document.getElementById("adminTextPost"); if(!txt.value.trim()) return alert("Enter text"); content = txt.value.trim(); }
+    else if(type === "image") { const img = document.getElementById("adminImageUrl"); if(!img.value.trim()) return alert("Image URL"); content = img.value.trim(); }
+    else { const vid = document.getElementById("adminVideoUrl"); if(!vid.value.trim()) return alert("Video URL"); content = vid.value.trim(); }
+    allPosts.unshift({ id: nextPostId++, type: type, content: content, reactions: { like: 0, lol: 0, dead: 0 }, comments: [], timestamp: Date.now() });
+    saveAllData(); renderAllPosts(); playPopSound(); modal.style.display = "none";
+    alert("🎉 New post created! Share it with friends!");
+  };
+  
+  // Share modal events
+  const shareModal = document.getElementById("shareModal");
+  const closeShareBtn = document.getElementById("closeShareBtn");
+  const copyShareLinkBtn = document.getElementById("copyShareLinkBtn");
+  const shareLinkInput = document.getElementById("shareLinkInput");
+  
+  closeShareBtn.onclick = () => { shareModal.style.display = "none"; };
+  copyShareLinkBtn.onclick = () => {
+    shareLinkInput.select();
+    navigator.clipboard.writeText(shareLinkInput.value);
+    alert("📋 Link copied to clipboard!");
+  };
+  shareModal.onclick = (e) => { if(e.target === shareModal) shareModal.style.display = "none"; };
+  
+  // Initialize
+  loadSavedData();
+  updateMuteUI();
+</script>
+</body>
+</html>
